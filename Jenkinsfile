@@ -7,7 +7,7 @@ pipeline {
         DOCKER_IMAGE = 'cithit/nashtb'                                                 // <------change this
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         GITHUB_URL = 'https://github.com/Wyntrx1903/-225-lab3-2.git'                   // <------change this
-        KUBECONFIG = credentials('Wyntrx1903')                                             // <------change this
+        KUBECONFIG = credentials('nashtb')                                             // <------change this
     }
 
     stages {
