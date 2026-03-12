@@ -17,7 +17,14 @@ pipeline {
                           userRemoteConfigs: [[url: "${GITHUB_URL}"]]])
             }
         }
-
+        //New addition of Lint HTML
+        stage('Lint HTML') { 
+            steps {
+                sh 'npm install htmlhint --save-dev'
+                sh 'npx htmlhint *.html'
+            }
+        }
+        //End of New addition
         stage('Build Docker Image') {
             steps {
                 script {
@@ -51,12 +58,15 @@ pipeline {
         stage('Check Kubernetes Cluster') {
             steps {
                 script {
-                    sh "kubectl get all"
+                    //sh "kubectl get all"  Removed for new script in accordance with 3.3
+                    sh "kubectl get pods"
+                    sh "kubectl get services"
+                    sh "kubectl get deploy"
                 }
             }
         }
     }
-    post {
+    post { //No changes in post
         success {
             slackSend([color: "good", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"])
         }
