@@ -8,11 +8,10 @@ pipeline {
         GITHUB_URL = 'https://github.com/Wyntrx1903/-225-lab3-2.git' //<-----change this to match this new repository!
         KUBECONFIG = credentials('nashtb-225')                           //<-----change this to match your kubernetes credentials (MiamiID-225)!  1 More change on line 63!
     }
-
+    
     stages {
         stage('Checkout') {
             steps {
-                cleanWs()
                 checkout([$class: 'GitSCM', branches: [[name: '*/main']],
                           userRemoteConfigs: [[url: "${GITHUB_URL}"]]])
             }
@@ -54,7 +53,16 @@ pipeline {
                 }
             }
         }
-        
+        stage('Deploy to Prod Environment') {
+            steps {
+                script {
+                    // Set up Kubernetes configuration using the specified KUBECONFIG
+                    //sh "ls -la"
+                    sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-prod.yaml"
+                    sh "kubectl apply -f deployment-prod.yaml"
+                }
+            }
+        }
         stage('Check Kubernetes Cluster') {
             steps {
                 script {
@@ -71,11 +79,13 @@ pipeline {
         success {
             slackSend color: "good", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
+            
         unstable {
             slackSend color: "warning", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
+            
         failure {
             slackSend color: "danger", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
     }
-}          
+}
