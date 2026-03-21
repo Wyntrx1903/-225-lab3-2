@@ -2,13 +2,13 @@ pipeline {
     agent any 
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'roseaw-dockerhub'  
-        DOCKER_IMAGE = 'cithit/nashtb'                               //<-----change this to your MiamiID!
+        DOCKER_CREDENTIALS_ID = 'roseaw-dockerhub'
+        DOCKER_IMAGE = 'cithit/nashtb'                                                                    //<------change this
         IMAGE_TAG = "build-${BUILD_NUMBER}"
-        GITHUB_URL = 'https://github.com/Wyntrx1903/-225-lab3-2.git' //<-----change this to match this new repository!
-        KUBECONFIG = credentials('nashtb-225')                           //<-----change this to match your kubernetes credentials (MiamiID-225)!  1 More change on line 63!
+        GITHUB_URL = 'https://github.com/Wyntrx1903/-225-lab3-2.git'                                          //<------change this
+        KUBECONFIG = credentials('nashtb-225')                                                         //<------change this
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -27,7 +27,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${IMAGE_TAG}")
+                    docker.build("${DOCKER_IMAGE}:${IMAGE_TAG}", "-f Dockerfile.build .")
                 }
             }
         }
@@ -45,47 +45,45 @@ pipeline {
         stage('Deploy to Dev Environment') {
             steps {
                 script {
-                    // This sets up the Kubernetes configuration using the specified KUBECONFIG
+                    // Set up Kubernetes configuration using the specified KUBECONFIG
                     def kubeConfig = readFile(KUBECONFIG)
-                    // This updates the deployment-dev.yaml to use the new image tag
+                    // Update deployment-dev.yaml to use the new image tag
                     sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-dev.yaml"
                     sh "kubectl apply -f deployment-dev.yaml"
                 }
             }
         }
-        stage('Deploy to Prod Environment') {
+
+       stage('Deploy to Prod Environment') {
             steps {
                 script {
                     // Set up Kubernetes configuration using the specified KUBECONFIG
                     //sh "ls -la"
                     sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-prod.yaml"
+                    sh "cd .."
                     sh "kubectl apply -f deployment-prod.yaml"
                 }
             }
         }
+        
         stage('Check Kubernetes Cluster') {
             steps {
                 script {
-                    sh "kubectl get pods"
-                    sh "kubectl get services"
-                    sh "kubectl get deploy"
+                    sh "kubectl get all"
                 }
             }
         }
     }
-
     post {
 
         success {
             slackSend color: "good", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
-            
         unstable {
-            slackSend color: "warning", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
+            slackSend color: "warning", message: "Build Unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
-            
         failure {
-            slackSend color: "danger", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
+            slackSend color: "danger", message: "Build Failed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
     }
 }
