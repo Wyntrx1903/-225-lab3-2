@@ -27,11 +27,12 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${IMAGE_TAG}", "-f Dockerfile.build .")
+                    docker.withRegistry('https://registry-1.docker.io', 'roseaw-dockerhub') {
+                        docker.build("${DOCKER_IMAGE}:${IMAGE_TAG}", "-f Dockerfile.build .")
+                    }
                 }
             }
         }
-
         stage('Push Docker Image') {
             steps {
                 script {
@@ -54,7 +55,20 @@ pipeline {
             }
         }
 
-       stage('Deploy to Prod Environment') {
+        stage("Run Acceptance Tests") {
+            steps {
+                script {
+                    sh 'docker stop qa-tests || true'
+                    sh 'docker rm qa-tests || true'
+                    sh 'docker build -t qa-tests -f Dockerfile.test .'
+                    sh 'docker run qa-tests'
+                    sh 'docker stop qa-tests || true'
+                    sh 'docker rm qa-tests || true'
+                }
+            }
+        }
+
+        stage('Deploy to Prod Environment') {
             steps {
                 script {
                     // Set up Kubernetes configuration using the specified KUBECONFIG
@@ -65,7 +79,6 @@ pipeline {
                 }
             }
         }
-        
         stage('Check Kubernetes Cluster') {
             steps {
                 script {
@@ -75,7 +88,7 @@ pipeline {
         }
     }
     post {
-
+        
         success {
             slackSend color: "good", message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
